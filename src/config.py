@@ -26,6 +26,10 @@ SHOOTOUTS_CSV = DATA_RAW / "shootouts.csv"
 
 PROCESSED_FEATURES = DATA_PROCESSED / "features.parquet"
 
+# Log de resultados REALES del Mundial 2026 ingresados por el usuario.
+# Se usa para el aprendizaje online (ver src/live/updater.py).
+LIVE_RESULTS_CSV = DATA_PROCESSED / "live_results_2026.csv"
+
 # Artefactos de modelo
 POISSON_MODEL_PATH = MODELS_DIR / "poisson_dixon_coles.joblib"
 ENSEMBLE_MODEL_PATH = MODELS_DIR / "lgbm_1x2.joblib"

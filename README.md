@@ -13,7 +13,7 @@ src/
 ├── models/              # Poisson Dixon-Coles, LightGBM, validación temporal
 ├── simulation/          # Fase de grupos, knockout, Monte Carlo
 └── utils/               # Geo (Haversine), logging
-app/                     # Dashboard Streamlit (3 páginas)
+app/                     # Dashboard Streamlit (4 páginas)
 tests/                   # pytest (incluye test anti-leakage)
 ```
 

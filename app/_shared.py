@@ -1,8 +1,9 @@
 """Utilidades compartidas por las páginas de Streamlit.
 
 Carga (con caché) los modelos entrenados y expone helpers para construir el
-motor de partidos y el simulador. Si los artefactos no existen, guía al usuario
-para entrenar.
+motor de partidos y el simulador. El estado de los equipos es el **estado vivo**:
+la base entrenada con el histórico + el replay de los resultados reales del
+Mundial 2026 que el usuario haya ingresado (aprendizaje online).
 """
 from __future__ import annotations
 
@@ -20,8 +21,14 @@ if str(ROOT) not in sys.path:
 
 from src.config import (  # noqa: E402
     ENSEMBLE_MODEL_PATH,
+    LIVE_RESULTS_CSV,
     POISSON_MODEL_PATH,
     TEAM_STATE_PATH,
+)
+from src.features.builder import TeamState  # noqa: E402
+from src.live.updater import (  # noqa: E402
+    build_live_state,
+    load_live_results,
 )
 from src.simulation.match_engine import MatchEngine  # noqa: E402
 from src.simulation.monte_carlo import MonteCarloSimulator  # noqa: E402
@@ -37,18 +44,39 @@ def artifacts_exist() -> bool:
 
 @st.cache_resource(show_spinner="Cargando modelos entrenados...")
 def load_models() -> tuple:
-    """Carga (cacheado) ensemble, poisson y team_state."""
+    """Carga (cacheado) ensemble, poisson y el team_state BASE (histórico)."""
     ensemble = joblib.load(ENSEMBLE_MODEL_PATH)
     poisson = joblib.load(POISSON_MODEL_PATH)
-    team_state = joblib.load(TEAM_STATE_PATH)
-    return ensemble, poisson, team_state
+    base_state = joblib.load(TEAM_STATE_PATH)
+    return ensemble, poisson, base_state
+
+
+def _live_log_signature() -> float:
+    """Marca de tiempo del log en vivo (cambia => invalida la caché del estado)."""
+    return LIVE_RESULTS_CSV.stat().st_mtime if LIVE_RESULTS_CSV.exists() else 0.0
+
+
+@st.cache_resource(show_spinner="Aplicando resultados del Mundial...")
+def get_live_state(_signature: float) -> TeamState:
+    """Estado vivo = base + replay del log. Cacheado por firma del log.
+
+    El argumento ``_signature`` (prefijo ``_`` para que Streamlit no intente
+    hashear el contenido) fuerza el recálculo cuando el CSV de resultados cambia.
+    """
+    _, _, base_state = load_models()
+    return build_live_state(base_state, load_live_results())
+
+
+def current_state() -> TeamState:
+    """Devuelve el estado de equipos vigente (con los resultados ingresados)."""
+    return get_live_state(_live_log_signature())
 
 
 def make_engine(seed: int = 42) -> MatchEngine:
-    """Crea un ``MatchEngine`` con RNG sembrado."""
-    ensemble, poisson, team_state = load_models()
+    """Crea un ``MatchEngine`` usando el estado vivo y RNG sembrado."""
+    ensemble, poisson, _ = load_models()
     return MatchEngine(
-        team_state=team_state,
+        team_state=current_state(),
         poisson=poisson,
         ensemble=ensemble,
         rng=np.random.default_rng(seed),
@@ -56,7 +84,7 @@ def make_engine(seed: int = 42) -> MatchEngine:
 
 
 def make_simulator(seed: int = 42) -> MonteCarloSimulator:
-    """Crea un ``MonteCarloSimulator`` listo para correr."""
+    """Crea un ``MonteCarloSimulator`` listo para correr (estado vivo)."""
     return MonteCarloSimulator(engine=make_engine(seed))
 
 
@@ -72,7 +100,9 @@ def require_models() -> bool:
 
 
 def list_teams() -> list[str]:
-    """Lista de selecciones con rating Elo conocido, ordenadas por fuerza."""
-    _, _, team_state = load_models()
-    ratings = team_state.elo.ratings
+    """Lista de selecciones con rating Elo conocido, ordenadas por fuerza.
+
+    Usa el estado vivo para que el orden refleje los resultados ingresados.
+    """
+    ratings = current_state().elo.ratings
     return sorted(ratings, key=lambda t: ratings[t], reverse=True)

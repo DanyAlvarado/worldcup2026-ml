@@ -12,6 +12,7 @@ completo (48 equipos, 12 grupos) mediante Monte Carlo.
 | ¿Qué tan fuerte es cada selección? | Página **📊 Estadísticas** |
 | Si juegan X vs Y, ¿quién gana y con qué marcador? | Página **⚔️ Simular Partido** |
 | ¿Quién tiene más chance de ser campeón? | Página **🏆 Simular Torneo** |
+| ¿Y si registro lo que ya pasó en el Mundial? | Página **📝 Ingresar Resultados** |
 
 Bajo el capó hay **dos modelos** entrenados con ~47,000 partidos internacionales
 reales (1872–2024, datos de Kaggle):
@@ -122,6 +123,34 @@ con el **Top 20** de selecciones más fuertes.
      dieciseisavos, octavos, cuartos, semis, final y título.
 
 **Tiempo aproximado:** 10,000 simulaciones tardan ~1 minuto.
+
+### 📝 Ingresar Resultados (aprendizaje online)
+Registra los partidos del Mundial **que ya se jugaron** para que el modelo
+aprenda de la realidad y afine sus predicciones.
+
+1. En **"Registrar un partido"** elige Equipo A (local) y Equipo B (visitante).
+2. Escribe los **goles** de cada uno y la **fecha**.
+3. Elige la **fase** (Grupos, Octavos, ...) — es informativa.
+4. **Cancha neutral:** déjalo marcado salvo que A juegue de local de verdad
+   (México, EE.UU. o Canadá en su país). Esto importa para el modelo.
+5. Pulsa **💾 Guardar resultado**.
+
+Qué pasa al guardar:
+- El Elo, la forma reciente y el pedigrí de ambos equipos se actualizan.
+- **Todas** las demás páginas (Estadísticas, Simular Partido, Simular Torneo)
+  usan de inmediato el estado actualizado. No hay que reentrenar nada.
+
+Gestión del historial:
+- Abajo ves la tabla **"Resultados ya registrados"**.
+- Puedes **eliminar** una fila por su número, o **borrar todo** el historial en
+  vivo para volver al estado base.
+- El panel **"Impacto en el modelo"** muestra cuánto subió/bajó el Elo de cada
+  selección por los resultados que ingresaste.
+
+> 🔒 **Tu historial nunca corrompe el modelo.** El estado se reconstruye siempre
+> como *histórico entrenado + resultados ingresados*. Borrar una fila revierte
+> su efecto exactamente, sin residuos.
+
 
 ---
 
