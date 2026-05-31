@@ -54,3 +54,41 @@ def test_bracket_has_five_rounds_from_32():
     assert [len(rounds[k]) for k in
             ("round16", "quarter", "semi", "final", "champion")] == [16, 8, 4, 2, 1]
     assert rounds["champion"] == ["T0"]
+
+
+def test_official_bracket_structure():
+    """El bracket oficial produce exactamente los tamaños correctos por ronda."""
+    import numpy as np
+    from src.simulation.bracket_2026 import simulate_bracket_2026
+    from src.simulation.group_stage import GroupResult, TeamRecord
+
+    class _StubEngine:
+        rng = np.random.default_rng(0)
+        def sample_score(self, home, away, neutral=True):
+            return (1, 0)  # el local siempre gana
+        def win_probabilities(self, home, away, neutral=True):
+            return {"home_win": 0.6, "draw": 0.2, "away_win": 0.2}
+
+    # Construir resultados de grupo sintéticos
+    letters = list("ABCDEFGHIJKL")
+    group_results = {}
+    thirds = []
+    for i, g in enumerate(letters):
+        base = i * 4
+        teams = [f"{g}{j}" for j in range(4)]
+        recs = [TeamRecord(t, points=9-j*3, gf=3-j, ga=j) for j, t in enumerate(teams)]
+        gr = GroupResult(name=g, first=recs[0], second=recs[1],
+                         third=recs[2], standings=recs)
+        group_results[g] = gr
+        thirds.append(recs[2])
+
+    # Los 8 mejores terceros (primeros 8)
+    best = thirds[:8]
+    result = simulate_bracket_2026(group_results, best, _StubEngine())
+
+    assert len(result["round32"]) == 16, "Round of 32 debe tener 16 ganadores"
+    assert len(result["round16"]) == 8,  "Round of 16 debe tener 8 ganadores"
+    assert len(result["quarter"]) == 4,  "Cuartos debe tener 4 ganadores"
+    assert len(result["semi"])    == 2,  "Semis debe tener 2 ganadores"
+    assert len(result["final"])   == 2,  "Final debe tener 2 finalistas"
+    assert len(result["champion"]) == 1, "Un único campeón"

@@ -22,8 +22,8 @@ import numpy as np
 import pandas as pd
 
 from src.config import GROUPS_2026, N_SIMULATIONS, SEED
+from src.simulation.bracket_2026 import simulate_bracket_2026
 from src.simulation.group_stage import TeamRecord, simulate_group
-from src.simulation.knockout import run_bracket
 from src.simulation.match_engine import MatchEngine
 from src.utils.logging import get_logger
 
@@ -34,15 +34,20 @@ STAGES = ["round32", "round16", "quarter", "semi", "final", "champion"]
 
 def _best_thirds(
     thirds: list[TeamRecord], n: int, rng: np.random.Generator
-) -> list[str]:
-    """Selecciona los ``n`` mejores terceros por criterio FIFA."""
+) -> list[TeamRecord]:
+    """Selecciona los ``n`` mejores terceros por criterio FIFA.
+
+    Devuelve los ``TeamRecord`` completos (no solo el nombre) para que el
+    bracket oficial pueda conocer la letra de grupo de cada tercero y evitar
+    que juegue contra el 1ro de su propio grupo.
+    """
     jitter = {id(t): rng.random() for t in thirds}
     ordered = sorted(
         thirds,
         key=lambda r: (r.points, r.gd, r.gf, jitter[id(r)]),
         reverse=True,
     )
-    return [t.team for t in ordered[:n]]
+    return ordered[:n]
 
 
 @dataclass
@@ -82,25 +87,21 @@ class MonteCarloSimulator:
     groups: dict[str, list[str]] = field(default_factory=lambda: dict(GROUPS_2026))
 
     def _simulate_once(self) -> dict[str, list[str]]:
-        """Una corrida completa: grupos + bracket. Devuelve avances por ronda."""
-        firsts, seconds, thirds = [], [], []
+        """Una corrida completa: grupos + bracket oficial FIFA 2026.
+
+        El emparejamiento sigue el cuadro REAL de la FIFA (no un shuffle
+        aleatorio): 1A vs 3ro de ciertos grupos, 2A vs 2B, etc., con la
+        misma estructura de bracket que progresa hacia la final.
+        """
+        group_results = {}
+        thirds = []
         for name, teams in self.groups.items():
             res = simulate_group(name, teams, self.engine)
-            firsts.append(res.first)
-            seconds.append(res.second)
+            group_results[name] = res
             thirds.append(res.third)
 
         best_thirds = _best_thirds(thirds, 8, self.engine.rng)
-        qualified = (
-            [r.team for r in firsts]
-            + [r.team for r in seconds]
-            + best_thirds
-        )
-        # Mezcla aleatoria del emparejamiento (proxy del cuadro real).
-        self.engine.rng.shuffle(qualified)
-        bracket = run_bracket(qualified, self.engine)
-        bracket["round32"] = qualified
-        return bracket
+        return simulate_bracket_2026(group_results, best_thirds, self.engine)
 
     def run(self, n_sims: int = N_SIMULATIONS) -> SimulationResults:
         """Ejecuta ``n_sims`` torneos y agrega los resultados.
