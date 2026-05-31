@@ -1,0 +1,19 @@
+Metadata-Version: 2.4
+Name: worldcup2026-ml
+Version: 0.1.0
+Summary: Pipeline ML end-to-end para predecir y simular el Mundial FIFA 2026
+Requires-Python: >=3.10
+Requires-Dist: pandas>=2.0
+Requires-Dist: numpy>=1.24
+Requires-Dist: scipy>=1.10
+Requires-Dist: scikit-learn>=1.3
+Requires-Dist: lightgbm>=4.0
+Requires-Dist: joblib>=1.3
+Requires-Dist: pyarrow>=12.0
+Requires-Dist: kagglehub>=0.3
+Requires-Dist: streamlit>=1.30
+Requires-Dist: plotly>=5.18
+Provides-Extra: dev
+Requires-Dist: pytest>=7.4; extra == "dev"
+Requires-Dist: ruff>=0.4; extra == "dev"
+Requires-Dist: mypy>=1.8; extra == "dev"
